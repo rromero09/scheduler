@@ -1,29 +1,57 @@
 import pandas as pd
-from dotenv import load_dotenv
-import os
+import requests
+import re
 
+SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTXg9gEJ1C6uHTQi1HxVFQQqf5wFn8JhGOjDG3srCU8yhiYrNtTQNXI4qYd_-BIOj_Y7k8jVmC69OkS/pub?output=csv'
 
-#loading environment variables from .env file
-load_dotenv()
+# Split worker names based on common separators
+def split_workers(raw_value):
+    if pd.isna(raw_value):
+        return []
+    return [name.strip() for name in re.split(r'[+&/|,]', str(raw_value)) if name.strip()]
 
+# Reshape the matrix-style schedule
+def reshape_schedule_matrix_style(df):
+    if df.empty:
+        raise ValueError("Filtered schedule is empty. No AM/PM shift data found.")
 
+    reshaped = []
 
-# Replace with your Google Sheets link
-SHEET_URL = os.getenv("SHEET_URL")
-print("SHEET_URL:", SHEET_URL)
+    for _, row in df.iterrows():
+        location = str(row.get("location", "")).strip().lower()
+        shift = str(row.get("shift", "")).strip().lower()
 
+        if shift not in ["am", "pm"]:
+            continue
 
-# Read the spreadsheet into a pandas DataFrame
-try:
+        for day in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]:
+            raw_workers = row.get(day)
+            if pd.isna(raw_workers):
+                continue
+
+            for name in split_workers(raw_workers):
+                reshaped.append({
+                    "worker": name.lower(),
+                    "day": day,
+                    "shift": shift,
+                    "location": location
+                })
+
+    if not reshaped:
+        raise ValueError("Reshaped schedule is empty. No valid worker data found.")
+
+    return reshaped
+
+# Public interface for the app to use
+
+def get_reshaped_schedule():
+    try:
         df = pd.read_csv(SHEET_URL)
-        # Filter the DataFrame based on the condition
+        if df.empty:
+            raise ValueError("The CSV file is empty or malformed.")
+
         df_filtered = df[df['shift'].isin(['AM', 'PM'])]
-        print(df_filtered)
-        print(df_filtered.head())
-        # Convert the filtered DataFrame to JSON
-        json_data = df_filtered.to_json(orient='records')
-except Exception as e:
-        print("Error reading the spreadsheet:", e)
+        return reshape_schedule_matrix_style(df_filtered)
 
-
-
+    except Exception as e:
+        raise RuntimeError(f"Failed to fetch or reshape schedule: {e}")
