@@ -4,6 +4,7 @@ from pymongo import MongoClient
 from fastapi.responses import JSONResponse
 from app.db.mongo import client, db
 # Importing MongoDB modules from app/db/mongo.py 
+
 router = APIRouter()
 
 # MongoDB connection

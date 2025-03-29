@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import os
 from ics import Calendar, Event, DisplayAlarm
-from services.ics_settings import DAY_MAP, SHIFT_TIMES
+from app.services.ics_settings import DAY_MAP,SHIFT_TIMES
 
 
 def build_ics_for_worker(worker_name, shifts, week_start_date: datetime, output_dir="tmp"):

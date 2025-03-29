@@ -1,8 +1,8 @@
-from datetime import datetime
-from utils.date_utils import get_current_week_start
+from datetime import datetime, timedelta
+import pytz
 from app.db.mongo import get_workers_from_db
-from services.csv_format import get_reshaped_schedule
-from services.ics_builder import build_ics_for_worker
+from app.services.csv_format import get_reshaped_schedule
+from app.services.ics_builder import build_ics_for_worker
 from fastapi import APIRouter, HTTPException
 
 router = APIRouter()
@@ -30,7 +30,9 @@ async def generate_schedule():
                 unmatched.append(name)
 
         # 📆 Get start of current week in Chicago time
-        week_start = get_current_week_start("America/Chicago")
+        chicago_tz = pytz.timezone("America/Chicago")
+        today = datetime.now(chicago_tz)  # Current time in Chicago timezone
+        week_start = today - timedelta(days=today.weekday())  
 
         ics_files = []
         for worker_name, shifts in shifts_by_worker.items():
