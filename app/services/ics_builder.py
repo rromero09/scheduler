@@ -16,7 +16,7 @@ def get_shift_times(shift: str, day: str) -> tuple[str, str]:
     day_type = "weekend" if day.lower() in ["saturday", "sunday"] else "weekday"
     return SHIFT_TIMES[shift][day_type]
 
-def create_event(uid: str, dtstart: datetime, dtend: datetime, summary: str, description: str, location: str, worker_name: str) -> str:
+def create_event_ics(uid: str, dtstart: datetime, dtend: datetime, summary: str, description: str, location: str, worker_name: str) -> str:
     # Use the current time for created/modified timestamps
     timestamp_now = datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
     
@@ -24,32 +24,8 @@ def create_event(uid: str, dtstart: datetime, dtend: datetime, summary: str, des
     local_start = f"{dtstart.strftime('%Y%m%dT%H%M%S')}"
     local_end = f"{dtend.strftime('%Y%m%dT%H%M%S')}"
     
-    return f"""BEGIN:VEVENT
-DTSTART;TZID=America/Chicago:{local_start}
-DTEND;TZID=America/Chicago:{local_end}
-DTSTAMP:{timestamp_now}
-ORGANIZER;CN={ORGANIZER_NAME}:mailto:{ORGANIZER_EMAIL}
-UID:{uid}@thebakehouse.com
-ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=TRUE;CN={worker_name.capitalize()}:mailto:{worker_name.lower()}@thebakehouse.com
-CREATED:{timestamp_now}
-DESCRIPTION:{description}
-LAST-MODIFIED:{timestamp_now}
-LOCATION:{location}
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:{summary}
-TRANSP:OPAQUE
-BEGIN:VALARM
-ACTION:DISPLAY
-DESCRIPTION:Reminder
-TRIGGER:-PT1H
-END:VALARM
-END:VEVENT
-"""
-
-def build_ics_for_worker(worker_name: str, shifts: list[dict], base_date: datetime) -> str:
-    # Use PUBLISH method instead of REQUEST for better compatibility
-    header = """BEGIN:VCALENDAR
+    # Start with the header
+    ics_content = """BEGIN:VCALENDAR
 PRODID:-//TheBakeHouseChicago//WorkerSchedule//EN
 VERSION:2.0
 CALSCALE:GREGORIAN
@@ -71,10 +47,51 @@ TZNAME:CST
 DTSTART:19701101T020000
 RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
 END:STANDARD
-END:VTIMEZONE"""
+END:VTIMEZONE
+"""
     
-    events = []
-    for shift in shifts:
+    # Add the event
+    ics_content += f"""BEGIN:VEVENT
+DTSTART;TZID=America/Chicago:{local_start}
+DTEND;TZID=America/Chicago:{local_end}
+DTSTAMP:{timestamp_now}
+ORGANIZER;CN={ORGANIZER_NAME}:mailto:{ORGANIZER_EMAIL}
+UID:{uid}@thebakehouse.com
+ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=TRUE;CN={worker_name.capitalize()}:mailto:{worker_name.lower()}@thebakehouse.com
+CREATED:{timestamp_now}
+DESCRIPTION:{description}
+LAST-MODIFIED:{timestamp_now}
+LOCATION:{location}
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:{summary}
+TRANSP:OPAQUE
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Reminder
+TRIGGER:-PT1H
+END:VALARM
+END:VEVENT
+END:VCALENDAR"""
+    
+    return ics_content
+
+def build_ics_for_worker(worker_name: str, shifts: list[dict], base_date: datetime) -> list[str]:
+    """
+    Builds individual ICS files for each shift and returns a list of file paths.
+    Files are organized in a subfolder named after the worker.
+    """
+    # Create base output directory
+    output_dir = Path("output_ics")
+    output_dir.mkdir(exist_ok=True)
+    
+    # Create worker-specific subdirectory
+    worker_dir = output_dir / worker_name.lower()
+    worker_dir.mkdir(exist_ok=True)
+    
+    ics_paths = []
+    
+    for shift_index, shift in enumerate(shifts):
         day_index = DAY_MAP[shift["day"].lower()]
         start_date = base_date + timedelta(days=day_index)
         start_time, end_time = get_shift_times(shift["shift"], shift["day"])
@@ -85,15 +102,18 @@ END:VTIMEZONE"""
         summary = f"{worker_name.capitalize()} - {shift['shift'].upper()} Shift"
         description = f"{shift['shift'].upper()} shift at {shift['location'].capitalize()}"
         location = shift["location"].capitalize()
-
-        events.append(create_event(uid, dtstart, dtend, summary, description, location, worker_name))
-
-    ics_content = f"{header}\n{''.join(events)}\nEND:VCALENDAR"
-
-    output_dir = Path("output_ics")
-    output_dir.mkdir(exist_ok=True)
-    ics_path = output_dir / f"{worker_name}.ics"
-    with open(ics_path, "w", encoding="utf-8") as f:
-        f.write(ics_content)
-
-    return str(ics_path)
+        
+        # Create ICS content for this specific shift
+        ics_content = create_event_ics(uid, dtstart, dtend, summary, description, location, worker_name)
+        
+        # Generate filename using date and shift info for uniqueness and readability
+        filename = f"{start_date.strftime('%Y-%m-%d')}_{shift['shift'].lower()}_{shift_index}.ics"
+        ics_path = worker_dir / filename
+        
+        # Write the file
+        with open(ics_path, "w", encoding="utf-8") as f:
+            f.write(ics_content)
+        
+        ics_paths.append(str(ics_path))
+    
+    return ics_paths
