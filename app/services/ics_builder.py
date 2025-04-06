@@ -1,119 +1,90 @@
-# services/ics_builder.py
-
-import uuid
 from datetime import datetime, timedelta
-from pathlib import Path
-import pytz
+import os
+import uuid
+from ics import Calendar, Event, DisplayAlarm
+from zoneinfo import ZoneInfo
+from services.ics_settings import DAY_MAP, SHIFT_TIMES
 
-from app.services.ics_settings import DAY_MAP, SHIFT_TIMES
-
-CENTRAL = pytz.timezone("America/Chicago")
-ORGANIZER_EMAIL = "thebakehousechicago@gmail.com"
-ORGANIZER_NAME = "The Bake House"
-
-def get_shift_times(shift: str, day: str) -> tuple[str, str]:
-    shift = shift.upper()
-    day_type = "weekend" if day.lower() in ["saturday", "sunday"] else "weekday"
-    return SHIFT_TIMES[shift][day_type]
-
-def create_event_ics(uid: str, dtstart: datetime, dtend: datetime, summary: str, description: str, location: str, worker_name: str) -> str:
-    # Use the current time for created/modified timestamps
-    timestamp_now = datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')
+def build_ics_for_worker(worker_name, shifts, week_start_date: datetime, output_dir="tmp"):
+    # Create a calendar with Apple-friendly properties
+    calendar = Calendar()
+    calendar.creator = "TheBakeHouseChicago"
     
-    # Format dates with timezone ID for Apple Calendar
-    local_start = f"{dtstart.strftime('%Y%m%dT%H%M%S')}"
-    local_end = f"{dtend.strftime('%Y%m%dT%H%M%S')}"
+    # Essential properties for Apple compatibility
+    calendar.extra.append("CALSCALE:GREGORIAN")
+    # Use REQUEST method instead of PUBLISH for invitation-style calendar events
+    calendar.extra.append("METHOD:REQUEST")
     
-    # Start with the header
-    ics_content = """BEGIN:VCALENDAR
-PRODID:-//TheBakeHouseChicago//WorkerSchedule//EN
-VERSION:2.0
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-BEGIN:VTIMEZONE
-TZID:America/Chicago
-X-LIC-LOCATION:America/Chicago
-BEGIN:DAYLIGHT
-TZOFFSETFROM:-0600
-TZOFFSETTO:-0500
-TZNAME:CDT
-DTSTART:19700308T020000
-RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
-END:DAYLIGHT
-BEGIN:STANDARD
-TZOFFSETFROM:-0500
-TZOFFSETTO:-0600
-TZNAME:CST
-DTSTART:19701101T020000
-RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
-END:STANDARD
-END:VTIMEZONE
-"""
+    # Add worker email from their name for invitation purposes
+    worker_email = f"{worker_name.lower().replace(' ', '.')}@thebakehouse.com"
     
-    # Add the event
-    ics_content += f"""BEGIN:VEVENT
-DTSTART;TZID=America/Chicago:{local_start}
-DTEND;TZID=America/Chicago:{local_end}
-DTSTAMP:{timestamp_now}
-ORGANIZER;CN={ORGANIZER_NAME}:mailto:{ORGANIZER_EMAIL}
-UID:{uid}@thebakehouse.com
-ATTENDEE;CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=TRUE;CN={worker_name.capitalize()}:mailto:{worker_name.lower()}@thebakehouse.com
-CREATED:{timestamp_now}
-DESCRIPTION:{description}
-LAST-MODIFIED:{timestamp_now}
-LOCATION:{location}
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:{summary}
-TRANSP:OPAQUE
-BEGIN:VALARM
-ACTION:DISPLAY
-DESCRIPTION:Reminder
-TRIGGER:-PT1H
-END:VALARM
-END:VEVENT
-END:VCALENDAR"""
+    # Define the organizer
+    organizer_name = "The Bake House"
+    organizer_email = "thebakehousechicago@gmail.com"
     
-    return ics_content
-
-def build_ics_for_worker(worker_name: str, shifts: list[dict], base_date: datetime) -> list[str]:
-    """
-    Builds individual ICS files for each shift and returns a list of file paths.
-    Files are organized in a subfolder named after the worker.
-    """
-    # Create base output directory
-    output_dir = Path("output_ics")
-    output_dir.mkdir(exist_ok=True)
-    
-    # Create worker-specific subdirectory
-    worker_dir = output_dir / worker_name.lower()
-    worker_dir.mkdir(exist_ok=True)
-    
-    ics_paths = []
-    
-    for shift_index, shift in enumerate(shifts):
-        day_index = DAY_MAP[shift["day"].lower()]
-        start_date = base_date + timedelta(days=day_index)
-        start_time, end_time = get_shift_times(shift["shift"], shift["day"])
-        dtstart = CENTRAL.localize(datetime.strptime(f"{start_date.date()} {start_time}", "%Y-%m-%d %H:%M"))
-        dtend = CENTRAL.localize(datetime.strptime(f"{start_date.date()} {end_time}", "%Y-%m-%d %H:%M"))
-
-        uid = str(uuid.uuid4())
-        summary = f"{worker_name.capitalize()} - {shift['shift'].upper()} Shift"
-        description = f"{shift['shift'].upper()} shift at {shift['location'].capitalize()}"
-        location = shift["location"].capitalize()
+    for shift in shifts:
+        day_name = shift.get("day", "").strip().lower()
+        shift_type = shift.get("shift", "").strip().upper()
+        location = shift.get("location", "").strip().title()
         
-        # Create ICS content for this specific shift
-        ics_content = create_event_ics(uid, dtstart, dtend, summary, description, location, worker_name)
+        if day_name not in DAY_MAP or shift_type not in SHIFT_TIMES:
+            continue
+            
+        # Calculate date for shift
+        shift_day = week_start_date + timedelta(days=DAY_MAP[day_name])
+        is_weekend = day_name in ["saturday", "sunday"]
+        time_key = "weekend" if is_weekend else "weekday"
+        start_str, end_str = SHIFT_TIMES[shift_type][time_key]
         
-        # Generate filename using date and shift info for uniqueness and readability
-        filename = f"{start_date.strftime('%Y-%m-%d')}_{shift['shift'].lower()}_{shift_index}.ics"
-        ics_path = worker_dir / filename
+        start_dt = datetime.strptime(f"{shift_day.date()} {start_str}", "%Y-%m-%d %H:%M")
+        end_dt = datetime.strptime(f"{shift_day.date()} {end_str}", "%Y-%m-%d %H:%M")
         
-        # Write the file
-        with open(ics_path, "w", encoding="utf-8") as f:
-            f.write(ics_content)
+        # Assign timezone (Chicago)
+        tz = ZoneInfo("America/Chicago")
+        start_dt = start_dt.replace(tzinfo=tz)
+        end_dt = end_dt.replace(tzinfo=tz)
         
-        ics_paths.append(str(ics_path))
+        # Create and add event with Apple-compatible properties
+        event = Event()
+        event.name = f"{worker_name.title()} - {shift_type} Shift"
+        event.begin = start_dt
+        event.end = end_dt
+        event.location = location
+        event.description = f"{shift_type} shift at {location}"
+        
+        # Set a unique UID format (important for Apple Calendar)
+        event.uid = str(uuid.uuid4())
+        
+        # Set organizer and attendee with specific roles
+        # Note: The ics library might not support this directly, so we use extra properties
+        event.organizer = f"mailto:{organizer_email}"
+        event.extra.append(f"ORGANIZER;CN={organizer_name}:mailto:{organizer_email}")
+        
+        # Add the worker as an attendee who needs to respond
+        event.extra.append(f"ATTENDEE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;CN={worker_name.title()}:mailto:{worker_email}")
+        
+        # Add Microsoft-specific properties that help with Apple compatibility
+        event.extra.append("X-MICROSOFT-CDO-BUSYSTATUS:BUSY")
+        event.extra.append("X-MICROSOFT-CDO-IMPORTANCE:1")
+        event.extra.append("X-MICROSOFT-DISALLOW-COUNTER:FALSE")
+        event.extra.append("X-MICROSOFT-DONOTFORWARDMEETING:FALSE")
+        event.extra.append("X-MICROSOFT-CDO-ALLDAYEVENT:FALSE")
+        event.extra.append("X-MICROSOFT-ISRESPONSEREQUESTED:TRUE")
+        event.extra.append("CLASS:PUBLIC")
+        event.extra.append("PRIORITY:5")
+        event.extra.append("STATUS:CONFIRMED")
+        event.extra.append("TRANSP:OPAQUE")
+        
+        # Add a reminder
+        event.alarms.append(DisplayAlarm(trigger=timedelta(hours=-1), display_text="Upcoming work shift!"))
+        
+        calendar.events.add(event)
     
-    return ics_paths
+    # Save calendar to a file
+    os.makedirs(output_dir, exist_ok=True)
+    filepath = os.path.join(output_dir, f"{worker_name.lower().replace(' ', '_')}_schedule.ics")
+    
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(calendar.serialize())
+    
+    return filepath
