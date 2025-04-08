@@ -1,8 +1,13 @@
 import pandas as pd
-import requests
 import re
+from dotenv import load_dotenv
+import os
 
-SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTXg9gEJ1C6uHTQi1HxVFQQqf5wFn8JhGOjDG3srCU8yhiYrNtTQNXI4qYd_-BIOj_Y7k8jVmC69OkS/pub?output=csv'
+# Loading environment variables from .env file
+load_dotenv()
+
+# Get connection settings with default values
+SHEET_URL = os.getenv("SHEET_URL")
 
 # Split worker names based on common separators
 def split_workers(raw_value):
@@ -55,3 +60,33 @@ def get_reshaped_schedule():
 
     except Exception as e:
         raise RuntimeError(f"Failed to fetch or reshape schedule: {e}")
+# Optional: clean phone numbers or emails if needed
+def clean_string(value):
+    if pd.isna(value):
+        return ""
+    return str(value).strip().lower()
+
+# Public method to return reshaped list of worker info
+def get_workers_from_csv():
+    try:
+        df = pd.read_csv(SHEET_URL)
+        if df.empty:
+            raise ValueError("Worker CSV is empty or malformed.")
+
+        workers = []
+        for _, row in df.iterrows():
+            worker = {
+                "name": clean_string(row.get("name")),
+                "email": clean_string(row.get("email")),
+                "phone": clean_string(row.get("phone")),
+            }
+            if worker["name"]:  # Only add if name exists
+                workers.append(worker)
+
+        if not workers:
+            raise ValueError("No valid worker entries found.")
+
+        return workers.lower
+
+    except Exception as e:
+        raise RuntimeError(f"Failed to fetch worker info: {e}") 
