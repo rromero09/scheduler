@@ -1,39 +1,44 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
-from pymongo import MongoClient
+from app.services.csv_format import get_workers_from_csv
+from app.services.email_service import send_email_with_ics, is_valid_email
+import os
 from fastapi.responses import JSONResponse
-from app.db.mongo import client, db
 # Importing MongoDB modules from app/db/mongo.py 
 
 router = APIRouter()
 
-# MongoDB connection
-client = MongoClient("mongodb://localhost:27017")
-db = client["scheduler_db"]
-collection = db["echo_data"]
 
-# Request model for incoming data
-class RequestModel(BaseModel):
-    name: str
-    last_name: str
 
-@router.post("/worker")
-async def put_worker(request: RequestModel):
-    try:
-        result = collection.insert_one(request.dict())
 
-        return JSONResponse(
-        status_code=200,
-        content={
-            "status": "success",
-            "inserted_id": str(result.inserted_id),
-            "data": request.dict()  # convert the request data to a dictionary for response, otherwise it raises an error
-        }
-    )
 
-    except Exception as e:
-        print("Error occurred inserting into DB:", e)
-        return JSONResponse(
-            status_code=500,
-            content={"status": "error", "detail": str(e)}
-        )
+@router.post("/notify-workers")
+def notify_workers():
+    workers = get_workers_from_csv()
+    sent_emails = []
+    skipped_emails = []
+
+    for name, email, _ in workers:
+        if not is_valid_email(email):
+            print(f"[!] Skipped (invalid email): {email}")
+            skipped_emails.append({"name": name, "email": email, "reason": "invalid email"})
+            continue
+
+        ics_path = f"tmp/{name}.ics"
+        if not os.path.exists(ics_path):
+            print(f"[!] Skipped (missing .ics): {ics_path}")
+            skipped_emails.append({"name": name, "email": email, "reason": "missing .ics"})
+            continue
+
+        try:
+            send_email_with_ics(email, name, ics_path)
+            print(f"[✓] Sent email to: {email}")
+            sent_emails.append({"name": name, "email": email})
+        except Exception as e:
+            print(f"[X] Failed to send email to {email}: {e}")
+            skipped_emails.append({"name": name, "email": email, "reason": str(e)})
+
+    return {
+        "message": "Email job completed",
+        "sent": sent_emails,
+        "skipped": skipped_emails
+    }
