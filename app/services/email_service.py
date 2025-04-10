@@ -7,7 +7,7 @@ from email_validator import validate_email, EmailNotValidError
 
 load_dotenv()
 GMAIL_USER= os.getenv("GMAIL_USER")
-GMAIL_PASSWORD = os.getenv("GMAIL_PASS")
+GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")
 
 def send_email_with_ics(to_email: str, to_name: str, ics_path: str):
     msg = EmailMessage()
@@ -20,10 +20,8 @@ Hi {to_name},
 
 Attached is your work shift schedule. To add it to your Google Calendar:
 
-1. Download the attached file on your phone.
-2. Open your Google Calendar app.
-3. Tap the hamburger menu ☰ and select 'Settings'.
-4. Choose 'Import' or 'Set up Calendar' and import the `.ics` file.
+1. Open the  attached file with the Google Calendar app.
+2. Press the "+" button to add the schedule to your calendar.
 
 Note: This method works best on Android devices or if Google Calendar is installed on your iPhone (it won’t work with Apple Calendar).
 

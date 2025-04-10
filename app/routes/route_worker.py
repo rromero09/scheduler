@@ -17,15 +17,18 @@ def notify_workers():
     sent_emails = []
     skipped_emails = []
 
-    for name, email, _ in workers:
+    for worker in workers:
+        name = worker["name"]
+        email = worker["email"]
+        ics_path = f"tmp/{name}_schedule.ics"
+
         if not is_valid_email(email):
-            print(f"[!] Skipped (invalid email): {email}")
+            print(f"[!] Skipped invalid email: {email}")
             skipped_emails.append({"name": name, "email": email, "reason": "invalid email"})
             continue
 
-        ics_path = f"tmp/{name}.ics"
         if not os.path.exists(ics_path):
-            print(f"[!] Skipped (missing .ics): {ics_path}")
+            print(f"[!] Skipped missing .ics: {ics_path}")
             skipped_emails.append({"name": name, "email": email, "reason": "missing .ics"})
             continue
 
@@ -34,7 +37,7 @@ def notify_workers():
             print(f"[✓] Sent email to: {email}")
             sent_emails.append({"name": name, "email": email})
         except Exception as e:
-            print(f"[X] Failed to send email to {email}: {e}")
+            print(f"[X] Failed to send to {email}: {e}")
             skipped_emails.append({"name": name, "email": email, "reason": str(e)})
 
     return {

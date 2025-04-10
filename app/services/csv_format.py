@@ -86,7 +86,7 @@ def get_workers_from_csv():
         if not workers:
             raise ValueError("No valid worker entries found.")
 
-        return workers.lower
+        return workers
 
     except Exception as e:
         raise RuntimeError(f"Failed to fetch worker info: {e}") 
