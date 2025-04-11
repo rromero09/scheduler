@@ -18,14 +18,17 @@ def send_email_with_ics(to_email: str, to_name: str, ics_path: str):
     msg.set_content(f"""
 Hi {to_name},
 
-Attached is your work shift schedule. To add it to your Google Calendar:
+Attached is your work shift schedule.
 
-1. Open the  attached file with the Google Calendar app.
-2. Press the "+" button to add the schedule to your calendar.
+To add it to your Google Calendar:
 
-Note: This method works best on Android devices or if Google Calendar is installed on your iPhone (it won’t work with Apple Calendar).
+**For iPhone users:**
+1. If you're viewing this email through the Gmail app, tap the "Add to Calendar" button.
+2. If you're using the Apple Mail app, open the attached `.ics` file using either the Apple Calendar app or the Google Calendar app.
 
-Thanks,
+**Note:** This method works best on Android devices, or if you have the Google Calendar app installed on your iPhone.
+
+Thanks,  
 The Bakehouse
 """)
 
