@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 import pytz
-from app.db.mongo import get_workers_from_db
-from app.services.csv_format import get_reshaped_schedule
+from app.services.csv_format import get_reshaped_schedule, get_workers_from_csv
 from app.services.ics_builder import build_ics_for_worker
 from fastapi import APIRouter, HTTPException
 import traceback
@@ -16,9 +15,9 @@ async def generate_schedule():
         if not schedule:
             raise HTTPException(status_code=500, detail="Error reshaping the schedule")
         
-        # Get workers from DB and map to lowercase for matching
-        workers = get_workers_from_db()
-        worker_names = {worker.lower() for worker in workers}
+        # Get workers from CSV instead of DB
+        workers_data = get_workers_from_csv()
+        worker_names = {worker["name"].lower() for worker in workers_data}
         
         # Organize shifts by worker
         shifts_by_worker = {}
