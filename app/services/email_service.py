@@ -9,7 +9,7 @@ load_dotenv()
 GMAIL_USER= os.getenv("GMAIL_USER")
 GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")
 
-def send_email_with_ics(to_email: str, to_name: str, ics_path: str):
+def send_email_with_ics(to_email: str, to_name: str, ics_path: str): # pydantic class
     msg = EmailMessage()
     msg["Subject"] = "The Bakehouse Shifts scheduler automation"
     msg["From"] =GMAIL_USER
