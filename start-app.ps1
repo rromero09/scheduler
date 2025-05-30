@@ -12,35 +12,42 @@ $ErrorActionPreference = "Stop"
 
 # Function to load environment variables from .env file
 function Load-DotEnv {
-    if (Test-Path ".env") {
-        Write-Host "Loading environment variables from .env file..."
-        Get-Content ".env" | ForEach-Object {
+    param (
+        [string]$Path = ".env"
+    )
+
+    if (Test-Path $Path) {
+        Write-Host "Loading environment variables from $Path..."
+        Get-Content $Path | ForEach-Object {
             $line = $_.Trim()
             if ($line -and !$line.StartsWith("#")) {
-                $key, $value = $line -split '=', 2
-                if ($key -and $value) {
-                    [Environment]::SetEnvironmentVariable($key.Trim(), $value.Trim(), "Process")
+                $parts = $line -split '=', 2
+                if ($parts.Count -eq 2) {
+                    $key = $parts[0].Trim()
+                    $value = $parts[1].Trim()
+                    [Environment]::SetEnvironmentVariable($key, $value, "Process")
                     Write-Host "Set environment variable: $key"
+                } else {
+                    Write-Warning "Skipped invalid line: $line"
                 }
             }
         }
     } else {
-        Write-Host "Warning: .env file not found. Using system environment variables." -ForegroundColor Yellow
+        Write-Warning ".env file not found at path '$Path'. Using system environment variables."
     }
 }
-
 # Step 1: Activate virtual environment
 try {
     Write-Host "Activating virtual environment..." -ForegroundColor Cyan
     
     # Check if virtual environment exists
-    if (-not (Test-Path "venv")) {
-        Write-Host "Virtual environment 'venv' not found. Creating a new one..." -ForegroundColor Yellow
+    if (-not (Test-Path ".venv")) {
+        Write-Host "Virtual environment '.venv' not found. Creating a new one..." -ForegroundColor Yellow
         python -m venv venv
     }
     
     # Activate virtual environment
-    & .\venv\Scripts\Activate.ps1
+    & .\.venv\Scripts\Activate.ps1
     
     Write-Host "Virtual environment activated successfully." -ForegroundColor Green
 } catch {
