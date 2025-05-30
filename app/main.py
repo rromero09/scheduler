@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.routes import route_worker
 from app.routes import route_schedule
+from app.routes import route_logger
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
@@ -8,7 +9,7 @@ from mangum import Mangum
 app = FastAPI()
 app.include_router(route_worker.router)
 app.include_router(route_schedule.router)
-
+app.include_router(route_logger.router)
 
     # its avoid  a raising error with dotenv when running the app with uvicorn command from terminal.
 app.add_middleware(

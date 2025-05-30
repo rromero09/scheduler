@@ -11,7 +11,7 @@ router = APIRouter()
 
 
 
-@router.post("/notify-workers")
+@router.post("/worker/notify")
 def notify_workers():
     workers = get_workers_from_csv()
     sent_emails = []

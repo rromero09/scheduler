@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from services.logger import log_event
+from app.services.logger import log_event
 
 router = APIRouter()
 

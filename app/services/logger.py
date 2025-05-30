@@ -1,5 +1,5 @@
 from datetime import datetime
-from db.mongo import db  # Reuse the DB connection
+from app.db.mongo import db  # Reuse the DB connection
 
 def log_event(message: str, level: str = "INFO"):
     if db is None:

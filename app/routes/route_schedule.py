@@ -7,13 +7,13 @@ import traceback
 
 router = APIRouter()
 
-@router.get("/schedule/generate")
+@router.post("/schedule/generate")
 async def generate_schedule():
     try:
         # Get and reshape schedule data
         schedule = get_reshaped_schedule()
         if not schedule:
-            raise HTTPException(status_code=500, detail="Error reshaping the schedule")
+            raise HTTPException(status_code= 500, detail="Error fetching the schedule from the Google Sheet.")
         
         # Get workers from CSV instead of DB
         workers_data = get_workers_from_csv()
@@ -34,7 +34,7 @@ async def generate_schedule():
         today = datetime.now(chicago_tz)  # Current time in Chicago timezone
         
         # Convert to naive datetime for proper week start calculation
-        # This is important to prevent timezone issues
+        # With timezone-aware datetime, we can get the start of the week
         today_naive = today.replace(tzinfo=None)
         week_start = today_naive - timedelta(days=today_naive.weekday())
         
