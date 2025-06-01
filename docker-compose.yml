@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  app:
+    env_file:
+      - .env
+    build: .
+    container_name: fastapi_app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongodb
+    environment:
+      MONGO_URI: mongodb://rarr:25886688@mongodb:27017/
+      DB_NAME: scheduler_db
+      LOG_COLLECTION: logs
+    volumes:
+      - .:/app
+    networks:
+      - backend
+
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: rarr
+      MONGO_INITDB_ROOT_PASSWORD: 25886688
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - backend
+
+volumes:
+  mongo_data:
+
+networks:
+  backend:
