@@ -8,8 +8,8 @@ This project is a backend service built with FastAPI, designed to generate worke
 
 ### 1. Create and activate virtual environment (optional but recommended):
 ```bash
-python3 -m venv .venv
-source venv/bin/activate  # On Windows: .venv\Scripts\activate
+python3 -m venv .venv 
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 ### 2. Getting the dependencies

@@ -26,4 +26,5 @@ ENV PYTHONUNBUFFERED=1
 # define the command that runs when the container starts
 #     - Launches your FastAPI app using Uvicorn
 #     - `"app.main:app"` means: file `main.py` inside `app/` folder, with a `FastAPI()` instance called `app`
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 

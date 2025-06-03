@@ -3,7 +3,7 @@ from app.routes import route_worker
 from app.routes import route_schedule
 from app.routes import route_logger
 from fastapi.middleware.cors import CORSMiddleware
-from mangum import Mangum
+
 
  
 app = FastAPI()
@@ -14,12 +14,13 @@ app.include_router(route_logger.router)
     # its avoid  a raising error with dotenv when running the app with uvicorn command from terminal.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Or restrict to your Sheets domain
-    allow_methods=["*"],
+    allow_origins=["https://script.google.com", "https://docs.google.com"],
+    allow_credentials=True,
+    allow_methods=["POST"],  # or limit to ["POST", "GET"]
     allow_headers=["*"],
 )
 
-handler = Mangum(app)
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to the scheduler API!"}

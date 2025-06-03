@@ -10,7 +10,7 @@ def log_event(message: str, level: str = "INFO"):
         db["logs"].insert_one({
             "message": message,
             "level": level,
-            "timestamp": datetime.utcnow()
+            "timestamp(utc)": datetime.utcnow()
         })
     except Exception as e:
         print(f"[LOGGING ERROR] {e}")
