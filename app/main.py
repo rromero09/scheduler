@@ -14,9 +14,9 @@ app.include_router(route_logger.router)
     # its avoid  a raising error with dotenv when running the app with uvicorn command from terminal.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://script.google.com", "https://docs.google.com"],
+    allow_origins=["https://script.google.com", "https://docs.google.com"], # Allow Google Apps Script and Google Docs origins 
     allow_credentials=True,
-    allow_methods=["POST"],  # or limit to ["POST", "GET"]
+    allow_methods=["POST"],
     allow_headers=["*"],
 )
 
