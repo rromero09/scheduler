@@ -12,14 +12,16 @@ SHEET_URL = os.getenv("SHEET_URL")
 def split_workers(raw_value):
     if pd.isna(raw_value):
         return []
-    return [name.strip() for name in re.split(r'[+&/|,]', str(raw_value)) if name.strip()]
+    return [name.strip() for name in re.split(r'[+&/|,]', str(raw_value)) if name.strip()] ##split shifts with two or more workers in the same cell 
+    #valid separators are +, &, /, |, and ,
 
 # Reshape the matrix-style schedule
 
 
-def reshape_schedule_matrix_style(df):
+def reshape_schedule_matrix_style(df): 
     if df.empty:
-        raise ValueError("Filtered schedule is empty. No AM/PM shift data found.")
+        raise ValueError("Filtered schedule is empty. No AM/PM shift data found.") ## wrong format in the CSV file
+    # Ensure the DataFrame has the expected columns
 
     reshaped = []
 

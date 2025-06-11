@@ -9,7 +9,7 @@ load_dotenv()
 GMAIL_USER= os.getenv("GMAIL_USER")
 GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")
 
-def send_email_with_ics(to_email: str, to_name: str, ics_path: str): # pydantic class
+def send_email_with_ics(to_email: str, to_name: str, ics_path: str): # email sender function
     msg = EmailMessage()
     msg["Subject"] = "The Bakehouse Shifts scheduler automation"
     msg["From"] =GMAIL_USER
@@ -24,9 +24,8 @@ To add it to your Google Calendar:
 
 **For iPhone users:**
 1. If you're viewing this email through the Gmail app, tap the "Add to Calendar" button.
-2. If you're using the Apple Mail app, open the attached `.ics` file using either the Apple Calendar app or the Google Calendar app.
+2. If you're using the Mail app, open the attached `.ics` file and add it using either Apple Calendar or Google Calendar.
 
-**Note:** This method works best on Android devices, or if you have the Google Calendar app installed on your iPhone.
 
 Thanks,  
 The Bakehouse
@@ -45,7 +44,7 @@ The Bakehouse
 
     
 
-def is_valid_email(email: str) -> bool:
+def is_valid_email(email: str) -> bool: 
     try:
         validate_email(email)
         return True
