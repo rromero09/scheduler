@@ -15,7 +15,7 @@ async def generate_schedule():
         if not schedule:
             raise HTTPException(status_code= 500, detail="Error fetching the schedule from the Google Sheet.")
         
-        # Get workers from CSV instead of DB
+        # Get workers from  the csv 
         workers_data = get_workers_from_csv()
         worker_names = {worker["name"].lower() for worker in workers_data}
         

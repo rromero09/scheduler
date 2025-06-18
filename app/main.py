@@ -1,15 +1,19 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from app.routes import route_worker
 from app.routes import route_schedule
 from app.routes import route_logger
 from fastapi.middleware.cors import CORSMiddleware
+from app.services.api_key import get_api_key
 
 
- 
 app = FastAPI()
-app.include_router(route_worker.router)
-app.include_router(route_schedule.router)
-app.include_router(route_logger.router)
+
+# Add API key dependency to all routes
+app.dependency_overrides[get_api_key] = get_api_key
+
+app.include_router(route_worker.router, dependencies=[Depends(get_api_key)])
+app.include_router(route_schedule.router, dependencies=[Depends(get_api_key)])
+app.include_router(route_logger.router, dependencies=[Depends(get_api_key)])
 
     # its avoid  a raising error with dotenv when running the app with uvicorn command from terminal.
 app.add_middleware(
